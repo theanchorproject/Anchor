@@ -1,0 +1,17 @@
+.antigravity/
+.cursor/
+.vscode/
+node_modules/
+.DS_Store
+Thumbs.db
+
+.env
+.env.local
+.env.development.local
+config/secrets.json
+keys.txt
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
