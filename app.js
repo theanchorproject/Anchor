@@ -1,10 +1,46 @@
-/**
- * Anchor - Client Logic (Version 1 Scaffold)
- * Handles quiz state, audio effects, accessibility options, and view transitions.
- */
+const supabaseUrl = "https://vfpzudsfoeikvumbfrsa.supabase.co";
+const supabaseKey = "sb_publishable_cEHgw6agXxzK9dgjlSxErg_zF2PZH5J";
 
-// --- 1. DUMMY DATA STORE ---
-// Accessible and easy for developers to remove, replace, or hook into an API
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false
+  }
+});
+
+async function getRandomTargetWord() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('everyday_vocabulary')
+      .select('target_word, category');
+
+    if (error) throw error;
+    else console.log("success")
+
+    return data;
+  } catch (err) {
+    console.error(err.message);
+    return [];
+  }
+}
+
+const VOCABULARY_DETAILS = {
+  toothbrush: {
+    clue: "What do you use to clean your teeth every morning and night?",
+    distractors: ["hairbrush", "soap", "towel"],
+    hint: "It has bristles, and you apply toothpaste to it."
+  },
+  refrigerator: {
+    clue: "What machine do you use to keep milk cold?",
+    distractors: ["oven", "microwave", "blender"],
+    hint: "It stands tall in the kitchen and has a cold door."
+  },
+  television: {
+    clue: "What screen do you watch to see your favorite shows and news?",
+    distractors: ["toaster", "radio", "washing machine"],
+    hint: "It displays moving pictures and is controlled by a remote."
+  }
+};
+
 const QUIZ_DATABASE = {
   important: [
     {
@@ -19,53 +55,32 @@ const QUIZ_DATABASE = {
       distractors: ["1945", "1958", "1962"],
       hint: "It was in the early 1950s."
     }
-  ],
-  everyday: [
-    {
-      clue: "What machine do you use to keep milk cold?",
-      target: "refrigerator",
-      distractors: ["oven", "microwave", "blender"],
-      hint: "It stands tall in the kitchen and has a cold door."
-    },
-    {
-      clue: "What utensil do you use to slice bread?",
-      target: "knife",
-      distractors: ["spoon", "fork", "whisk"],
-      hint: "It is sharp and used for cutting."
-    }
   ]
 };
 
-// --- 2. STATE MANAGEMENT ---
-let currentCategory = "important"; // Default category
+let currentCategory = "everyday";
 let currentQuestionIndex = 0;
 let isTextToSpeechEnabled = true;
+let supabaseVocabulary = [];
 
-// --- 3. DOM ELEMENTS ---
 const elements = {
   onboardingOverlay: document.getElementById("onboarding-overlay"),
   btnStart: document.getElementById("btn-start"),
-
   emergencyOverlay: document.getElementById("emergency-overlay"),
   btnEmergencyTrigger: document.getElementById("btn-emergency-trigger"),
   btnResumeQuiz: document.getElementById("btn-resume-quiz"),
   btnAlertCaregiver: document.getElementById("btn-alert-caregiver"),
-
   celebrationOverlay: document.getElementById("celebration-overlay"),
   btnNextQuestion: document.getElementById("btn-next-question"),
   celebrationFeedback: document.getElementById("celebration-feedback"),
-
   clueDisplay: document.getElementById("clue-display"),
   btnSpeakClue: document.getElementById("btn-speak-clue"),
   hintDisplay: document.getElementById("hint-display"),
   optionsContainer: document.getElementById("options-container"),
-
   navImportant: document.getElementById("nav-important"),
   navEveryday: document.getElementById("nav-everyday")
 };
 
-// --- 4. ACCESSIBLE SYNTHETIC AUDIO ENGINE ---
-// Uses Web Audio API to synthesize smooth tones for validation feedback
 const AudioEngine = {
   ctx: null,
 
@@ -78,8 +93,6 @@ const AudioEngine = {
   playCorrect() {
     this.init();
     const now = this.ctx.currentTime;
-
-    // Create ascending pleasant notes (C4, E4, G4, C5)
     const notes = [261.63, 329.63, 392.00, 523.25];
     notes.forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
@@ -103,8 +116,6 @@ const AudioEngine = {
   playIncorrect() {
     this.init();
     const now = this.ctx.currentTime;
-
-    // Play a low, soft warm dual-tone (E3 and C3)
     const notes = [164.81, 130.81];
     notes.forEach((freq) => {
       const osc = this.ctx.createOscillator();
@@ -126,54 +137,88 @@ const AudioEngine = {
   }
 };
 
-// --- 5. SPEECH SYNTHESIS ENGINE ---
-// Reads clue questions out loud to assist recognition
 function speakClueText(text) {
   if (!('speechSynthesis' in window)) return;
-
-  // Cancel any ongoing speech
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.85; // Speak slightly slower for clarity
+  utterance.rate = 0.85;
   utterance.pitch = 1.0;
 
   window.speechSynthesis.speak(utterance);
 }
 
-// --- 6. CORE LOGIC & RENDERING ---
+function getFallbackDistractors(category, targetWord) {
+  const sameCategory = supabaseVocabulary
+    .filter(x => x.category === category && x.target_word !== targetWord)
+    .map(x => x.target_word);
 
-function getQuestions() {
-  return QUIZ_DATABASE[currentCategory] || [];
+  if (sameCategory.length >= 3) {
+    return sameCategory.slice(0, 3);
+  }
+
+  const allOtherWords = supabaseVocabulary
+    .filter(x => x.target_word !== targetWord)
+    .map(x => x.target_word);
+
+  const pool = [...sameCategory, ...allOtherWords, "apple", "banana", "chair", "table", "clock"];
+  const uniquePool = Array.from(new Set(pool)).filter(w => w !== targetWord);
+  return uniquePool.slice(0, 3);
+}
+
+function getEverydayQuestion(item) {
+  if (!item) return null;
+  const word = item.target_word.toLowerCase();
+  const details = VOCABULARY_DETAILS[word] || {
+    clue: `What everyday item is this?`,
+    distractors: getFallbackDistractors(item.category, item.target_word),
+    hint: `It starts with the letter '${item.target_word[0].toUpperCase()}'.`
+  };
+
+  return {
+    clue: details.clue,
+    target: item.target_word,
+    distractors: details.distractors,
+    hint: details.hint
+  };
 }
 
 function loadQuestion() {
-  const questions = getQuestions();
-  if (questions.length === 0) return;
+  let currentQuestion = null;
 
-  // Wrap index to handle looping
-  if (currentQuestionIndex >= questions.length) {
-    currentQuestionIndex = 0;
+  if (currentCategory === "important") {
+    const questions = QUIZ_DATABASE.important;
+    if (questions.length === 0) return;
+
+    if (currentQuestionIndex >= questions.length) {
+      currentQuestionIndex = 0;
+    }
+    currentQuestion = questions[currentQuestionIndex];
+  } else {
+    if (supabaseVocabulary.length === 0) {
+      elements.clueDisplay.textContent = "Loading vocabulary...";
+      return;
+    }
+
+    if (currentQuestionIndex >= supabaseVocabulary.length) {
+      currentQuestionIndex = 0;
+    }
+    const item = supabaseVocabulary[currentQuestionIndex];
+    currentQuestion = getEverydayQuestion(item);
   }
 
-  const currentQuestion = questions[currentQuestionIndex];
+  if (!currentQuestion) return;
 
-  // Update clue
   elements.clueDisplay.textContent = currentQuestion.clue;
-
-  // Clear hints
   elements.hintDisplay.textContent = "";
 
-  // Prepare answers (Target word + distractors shuffled)
   const answers = [
     { text: currentQuestion.target, isTarget: true },
     ...currentQuestion.distractors.map(d => ({ text: d, isTarget: false }))
   ];
 
-  // Accessible shuffle implementation
   answers.sort(() => Math.random() - 0.5);
 
-  // Render options
   elements.optionsContainer.innerHTML = "";
   answers.forEach((ans, idx) => {
     const btn = document.createElement("button");
@@ -185,60 +230,41 @@ function loadQuestion() {
     elements.optionsContainer.appendChild(btn);
   });
 
-  // Automatically read clue aloud if preferred (and onboarding is done)
   if (isTextToSpeechEnabled && !elements.onboardingOverlay.classList.contains("active")) {
-    // Delay slightly to prevent overlap with transition effects
     setTimeout(() => speakClueText(currentQuestion.clue), 500);
   }
 }
 
 function handleSelection(buttonElement, isTarget, targetValue, hintText) {
   if (isTarget) {
-    // 1. Success validation
     AudioEngine.playCorrect();
-
-    // 2. Play celebration speech
     if (isTextToSpeechEnabled) {
       speakClueText(`Correct! The answer is ${targetValue}. Excellent job.`);
     }
 
-    // 3. Show Celebration modal
     elements.celebrationFeedback.innerHTML = `You correctly remembered: <strong>${targetValue}</strong>`;
     elements.celebrationOverlay.classList.add("active");
   } else {
-    // 1. Failure warning tone
     AudioEngine.playIncorrect();
 
-    // 2. Gentle grey out button
     buttonElement.classList.add("incorrect");
     buttonElement.setAttribute("disabled", "true");
 
-    // 3. Show gentle text hint
     elements.hintDisplay.textContent = hintText;
 
-    // 4. Optionally read hint aloud
     if (isTextToSpeechEnabled) {
       speakClueText(hintText);
     }
   }
 }
 
-// --- 7. EVENT LISTENERS ---
-
-// Onboarding Dismissal
 elements.btnStart.addEventListener("click", () => {
   elements.onboardingOverlay.classList.remove("active");
-
-  // Initialize context on user click
   AudioEngine.init();
-
-  // Initial load
   loadQuestion();
 });
 
-// Emergency Trigger & Intercept Flow
 elements.btnEmergencyTrigger.addEventListener("click", () => {
-  // Pause any speaking
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
   }
@@ -249,7 +275,6 @@ elements.btnResumeQuiz.addEventListener("click", () => {
   elements.emergencyOverlay.classList.remove("active");
 });
 
-// Alert Caregiver Flow (Mock demonstration)
 elements.btnAlertCaregiver.addEventListener("click", () => {
   elements.btnAlertCaregiver.style.background = "#059669";
   elements.btnAlertCaregiver.querySelector(".btn-text-large").textContent = "Caregiver Notified";
@@ -262,20 +287,17 @@ elements.btnAlertCaregiver.addEventListener("click", () => {
   }, 4000);
 });
 
-// Next Question Trigger
 elements.btnNextQuestion.addEventListener("click", () => {
   elements.celebrationOverlay.classList.remove("active");
   currentQuestionIndex++;
   loadQuestion();
 });
 
-// Clue Speaker Button Trigger
 elements.btnSpeakClue.addEventListener("click", () => {
   const currentClue = elements.clueDisplay.textContent;
   speakClueText(currentClue);
 });
 
-// Category Switch Tab Controls
 elements.navImportant.addEventListener("click", () => {
   if (currentCategory === "important") return;
   currentCategory = "important";
@@ -298,8 +320,17 @@ elements.navEveryday.addEventListener("click", () => {
   loadQuestion();
 });
 
-// Initialize on page load (Wait for user click to trigger speech & sound to satisfy browsers)
-window.addEventListener("DOMContentLoaded", () => {
-  // Setup loading state
+window.addEventListener("DOMContentLoaded", async () => {
   elements.clueDisplay.textContent = "Please read the disclaimer to start.";
+  elements.navEveryday.classList.add("active");
+  elements.navImportant.classList.remove("active");
+
+  try {
+    const data = await getRandomTargetWord();
+    if (data && data.length > 0) {
+      supabaseVocabulary = data.sort(() => Math.random() - 0.5);
+    }
+  } catch (err) {
+    console.error(err);
+  }
 });

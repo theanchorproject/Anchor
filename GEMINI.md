@@ -53,7 +53,7 @@ The application will feature a simple bottom navigation bar allowing users to to
 
 *Figure 1.0: Early prototype of v1 interface showcasing a clue/question area with a speaker icon and the clue/question, followed by four high-contrast, full-width rectangular target (answer) buttons. The top navigation bar includes a blue anchor icon on the top left and a red "HELP" button with a siren/alert icon in the text.*
 
-## **Tech Notes & Data Models**
+# **Tech Notes & Data Models**
 
 To prioritize patient data privacy and minimize infrastructure costs, **Version 1 will require no backend databases or user accounts.** All data is stored securely and locally on the patient's device using browser local storage.
 
@@ -68,7 +68,7 @@ The application connects directly to OpenAI's API. To ensure the AI never output
 3. `'distractors': An array of exactly 3 incorrect but highly plausible alternative words within the exact same category (e.g., if target is 'Refrigerator', distractors must be other kitchen appliances like 'Oven', 'Microwave', 'Blender').`   
    `Return ONLY valid JSON. No conversational text, markdown formatting, or explanations.”`
 
-## **AI Safety & Emergency Guardrails**
+# **AI Safety & Emergency Guardrails**
 
 Because this app is designed for individuals with cognitive decline, strict safety boundaries must be implemented:
 
@@ -77,9 +77,7 @@ Because this app is designed for individuals with cognitive decline, strict safe
 
 ### 
 
-### 
-
-### **Phase 2: Future Expansion (Spaced Repetition)**
+# **Phase 2: Future Expansion (Spaced Repetition)**
 
 Once Version 1’s core loops are stable, Phase 2 will implement the **SM-2 Spaced Repetition Algorithm**. The system will scan the **Block List** and automatically schedule difficult words to reappear with **Recall Clues** at mathematically optimized intervals (1 day, 3 days, 7 days) to aggressively reinforce fading neural pathways.
 

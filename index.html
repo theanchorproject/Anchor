@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
+<!-- whatchu poking round here for -->
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Anchor</title>
-  <!-- Modern Accessible Sans-Serif Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,7 +14,6 @@
 
 <body>
 
-  <!-- 1. Medical Disclaimer & Onboarding Screen -->
   <div id="onboarding-overlay" class="overlay active" role="dialog" aria-modal="true"
     aria-labelledby="onboarding-title">
     <div class="overlay-card onboarding-card">
@@ -29,7 +28,6 @@
     </div>
   </div>
 
-  <!-- 2. Emergency Intercept Overlay -->
   <div id="emergency-overlay" class="overlay" role="dialog" aria-modal="true" aria-labelledby="emergency-title">
     <div class="emergency-screen">
       <div class="emergency-header">
@@ -56,7 +54,6 @@
     </div>
   </div>
 
-  <!-- 3. Celebration Overlay -->
   <div id="celebration-overlay" class="overlay" role="dialog" aria-modal="true">
     <div class="overlay-card celebration-card">
       <div class="celebration-emoji">🎉</div>
@@ -66,10 +63,8 @@
     </div>
   </div>
 
-  <!-- Main Application Wrapper -->
   <div class="app-container">
 
-    <!-- Top Navigation Header -->
     <header class="app-header">
       <div class="header-logo">
         <span class="logo-icon">⚓</span>
@@ -80,13 +75,10 @@
       </button>
     </header>
 
-    <!-- Main Content Area -->
     <main class="app-main">
 
-      <!-- Challenge Screen -->
       <section class="challenge-section">
 
-        <!-- Clue/Question Area -->
         <div class="clue-container">
           <button id="btn-speak-clue" class="btn-speak" aria-label="Listen to clue read aloud">
             <svg class="speaker-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36"
@@ -101,12 +93,9 @@
           </div>
         </div>
 
-        <!-- Feedback & Hints Box -->
         <div id="hint-display" class="hint-container" aria-live="polite">
-          <!-- Text hints appear here when an incorrect button is tapped -->
         </div>
 
-        <!-- Interface Options (Four full-width, high-contrast buttons) -->
         <div class="options-container" id="options-container">
           <button class="option-btn" data-index="0">Option 1</button>
           <button class="option-btn" data-index="1">Option 2</button>
@@ -118,7 +107,6 @@
 
     </main>
 
-    <!-- Bottom Navigation Bar -->
     <nav class="app-navbar">
       <button id="nav-important" class="nav-item active" aria-label="Important Information Mode">
         <span class="nav-icon">👤</span>
@@ -131,7 +119,7 @@
     </nav>
 
   </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js" defer></script>
 </body>
 

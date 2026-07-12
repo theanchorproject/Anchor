@@ -1,7 +1,4 @@
-/* Anchor Design System & Core Styles (Version 1 Scaffold) */
-
 :root {
-  /* Color Palette (HSL Tailored for Harmony and Premium Contrast) */
   --color-primary-blue: hsl(220, 90%, 56%);
   --color-primary-blue-hover: hsl(220, 90%, 50%);
   --color-primary-blue-light: hsl(220, 90%, 96%);
@@ -23,7 +20,6 @@
   --color-card-border: hsla(210, 30%, 80%, 0.5);
 
   --font-main: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -32,7 +28,6 @@
   --transition-fast: all 0.15s ease-in-out;
 }
 
-/* Reset and Global Styles */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -40,8 +35,7 @@
 }
 
 body {
-  /* font-family: var(--font-main); this font is uuuuuglyyyy */
-  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-family: var(--font-main);
   background: linear-gradient(135deg, var(--color-bg-gradient-start), var(--color-bg-gradient-end));
   color: var(--color-text-dark);
   min-height: 100vh;
@@ -50,7 +44,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Layout Containers */
 .app-container {
   display: flex;
   flex-direction: column;
@@ -63,12 +56,9 @@ body {
   border-right: 1px solid var(--color-card-border);
   position: relative;
   padding-top: 80px;
-  /* Header space */
   padding-bottom: 90px;
-  /* Navbar space */
 }
 
-/* Header Styles */
 .app-header {
   position: fixed;
   top: 0;
@@ -107,7 +97,6 @@ body {
   letter-spacing: -0.5px;
 }
 
-/* Emergency Helper Button */
 .btn-emergency-trigger {
   background: var(--color-emergency-red);
   color: white;
@@ -133,7 +122,6 @@ body {
   transform: translateY(1px);
 }
 
-/* Challenge Section styling */
 .app-main {
   flex: 1;
   padding: 24px;
@@ -149,7 +137,6 @@ body {
   width: 100%;
 }
 
-/* Clue & Speaker Box */
 .clue-container {
   background: var(--color-card-bg);
   border: 1px solid var(--color-card-border);
@@ -214,7 +201,6 @@ body {
   color: var(--color-text-dark);
 }
 
-/* Hint Text Container */
 .hint-container {
   min-height: 48px;
   display: flex;
@@ -227,7 +213,6 @@ body {
   padding: 0 10px;
 }
 
-/* Option Buttons Grid (Full-width rectangle layout) */
 .options-container {
   display: flex;
   flex-direction: column;
@@ -251,7 +236,6 @@ body {
   align-items: center;
   justify-content: space-between;
   min-height: 72px;
-  /* Large touch target */
   position: relative;
 }
 
@@ -265,7 +249,6 @@ body {
   transform: translateY(1px);
 }
 
-/* Incorrect (Greying Out) Button State */
 .option-btn.incorrect {
   background: hsl(210, 10%, 93%);
   border-color: hsl(210, 10%, 80%);
@@ -281,7 +264,6 @@ body {
   font-size: 1.2rem;
 }
 
-/* Bottom Navigation Bar */
 .app-navbar {
   position: fixed;
   bottom: 0;
@@ -337,7 +319,6 @@ body {
   transform: scale(1.1);
 }
 
-/* Overlay Screen Styles (General Modal UI) */
 .overlay {
   position: fixed;
   top: 0;
@@ -361,7 +342,6 @@ body {
   pointer-events: auto;
 }
 
-/* Modal Cards */
 .overlay-card {
   background: white;
   border-radius: 28px;
@@ -378,7 +358,6 @@ body {
   transform: scale(1);
 }
 
-/* Button general */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -410,7 +389,6 @@ body {
   transform: translateY(1px);
 }
 
-/* Onboarding Specifics */
 .onboarding-icon {
   font-size: 4rem;
   color: var(--color-primary-blue);
@@ -439,7 +417,6 @@ body {
   text-align: left;
 }
 
-/* Celebration Modal Specifics */
 .celebration-emoji {
   font-size: 5rem;
   margin-bottom: 20px;
@@ -459,7 +436,6 @@ body {
   margin-bottom: 28px;
 }
 
-/* Emergency Overlay Specifics */
 .emergency-screen {
   background: var(--color-emergency-bg);
   width: 100%;
@@ -556,7 +532,6 @@ body {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Animations */
 @keyframes float {
   0% {
     transform: translateY(0px) rotate(0deg);
@@ -630,5 +605,121 @@ body {
     font-size: 1.25rem;
     padding: 16px 20px;
     min-height: 64px;
+  }
+}
+
+@media (min-width: 768px) {
+  .app-container {
+    max-width: 1024px;
+  }
+
+  .app-header {
+    max-width: 1024px;
+  }
+
+  .app-navbar {
+    max-width: 1024px;
+    justify-content: center;
+    gap: 24px;
+    padding: 0 40px;
+  }
+
+  .nav-item {
+    flex: 0 1 280px;
+    flex-direction: row;
+    height: 60px;
+    align-self: center;
+    border-radius: 12px;
+    border-top: none;
+    padding: 10px 24px;
+    gap: 12px;
+  }
+
+  .nav-item.active {
+    border-top: none;
+    border-bottom: 4px solid var(--color-primary-blue);
+    background: var(--color-primary-blue-light);
+  }
+
+  .app-main {
+    padding: 40px;
+  }
+
+  .challenge-section {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    grid-template-areas:
+      "clue options"
+      "hint options";
+    gap: 24px;
+    align-items: start;
+  }
+
+  .clue-container {
+    grid-area: clue;
+    padding: 32px;
+    min-height: 180px;
+  }
+
+  .clue-container::before {
+    width: 8px;
+  }
+
+  .clue-text-wrapper {
+    width: 100%;
+  }
+
+  .clue-text {
+    font-size: 1.8rem;
+  }
+
+  .hint-container {
+    grid-area: hint;
+    min-height: auto;
+    padding: 16px;
+    justify-content: flex-start;
+    text-align: left;
+    background: hsla(354, 84%, 48%, 0.05);
+    border: 1px dashed hsla(354, 84%, 48%, 0.2);
+    border-radius: 12px;
+  }
+
+  .options-container {
+    grid-area: options;
+    gap: 20px;
+  }
+
+  .option-btn {
+    padding: 24px;
+    font-size: 1.5rem;
+    min-height: 80px;
+  }
+
+  .emergency-screen {
+    max-width: 800px;
+    height: auto;
+    max-height: 90vh;
+    border-radius: 28px;
+    padding: 48px;
+    gap: 40px;
+    justify-content: center;
+    animation: flash-red 3s infinite alternate;
+  }
+
+  .emergency-header {
+    margin-top: 0;
+  }
+
+  .emergency-actions {
+    flex-direction: row;
+    gap: 24px;
+  }
+
+  .btn-emergency-call,
+  .btn-caregiver-call {
+    flex: 1;
+    min-height: 140px;
+    padding: 28px 20px;
+    justify-content: center;
   }
 }
