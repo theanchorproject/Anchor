@@ -1,12 +1,14 @@
 const supabaseUrl = "https://vfpzudsfoeikvumbfrsa.supabase.co";
 const supabaseKey = "sb_publishable_cEHgw6agXxzK9dgjlSxErg_zF2PZH5J";
 
+//create supabase
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: false
   }
 });
 
+//pull from db
 async function getRandomTargetWord() {
   try {
     const { data, error } = await supabaseClient
@@ -23,6 +25,7 @@ async function getRandomTargetWord() {
   }
 }
 
+//placeholder data
 const VOCABULARY_DETAILS = {
   toothbrush: {
     clue: "What do you use to clean your teeth every morning and night?",
@@ -41,6 +44,7 @@ const VOCABULARY_DETAILS = {
   }
 };
 
+//placeholder data
 const QUIZ_DATABASE = {
   important: [
     {
@@ -58,11 +62,13 @@ const QUIZ_DATABASE = {
   ]
 };
 
+//misc
 let currentCategory = "everyday";
 let currentQuestionIndex = 0;
 let isTextToSpeechEnabled = true;
 let supabaseVocabulary = [];
 
+//elements
 const elements = {
   onboardingOverlay: document.getElementById("onboarding-overlay"),
   btnStart: document.getElementById("btn-start"),
@@ -81,6 +87,7 @@ const elements = {
   navEveryday: document.getElementById("nav-everyday")
 };
 
+//chimes
 const AudioEngine = {
   ctx: null,
 
@@ -137,12 +144,13 @@ const AudioEngine = {
   }
 };
 
+//tts
 function speakClueText(text) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.85;
+  utterance.rate = 0.5;
   utterance.pitch = 1.0;
 
   window.speechSynthesis.speak(utterance);
@@ -334,3 +342,23 @@ window.addEventListener("DOMContentLoaded", async () => {
     console.error(err);
   }
 });
+
+(function logAppVersion() {
+  const version = "v0.02.1";
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+
+  let environment = "pages";
+  let badgeColor = "#0284c7";
+
+  if (protocol === "file:") {
+    environment = "filepath";
+    badgeColor = "#dcca26ff";
+  }
+  else if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.startsWith("192.168.")) {
+    environment = "server";
+    badgeColor = "#16a34a";
+  }
+
+  console.log(`ANCHOR ${version} running on ${environment}`);
+})();
