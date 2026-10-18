@@ -25,18 +25,60 @@ async function getRandomTargetWord() {
   }
 }
 
-//first pull from db
+//second pull from db
 async function getImportantInfo() {
   try {
     const { data, error } = await supabaseClient
       .from('important_info')
-      .select('clue, target, hint, distractors');
+      .select('id, clue, target, hint, distractors, repetition_count, interval_days, ease_factor') 
+      .lte('next_review_date', new Date().toISOString()); //'lte' means less than or equal to
 
     if (error) throw error;
     return data;
   } catch (err) {
     console.error("Failed to fetch important info:", err.message);
     return [];
+  }
+}
+
+//sm2 algorithm
+async function updateMemoryStrength(item, isCorrect) {
+  let { id, repetition_count, interval_days, ease_factor } = item;
+
+  // The SM-2 Math Logic
+  if (isCorrect) {
+    if (repetition_count === 0) {
+      interval_days = 1;
+    } else if (repetition_count === 1) {
+      interval_days = 6;
+    } else {
+      interval_days = Math.round(interval_days * ease_factor);
+    }
+    repetition_count += 1;
+    ease_factor += 0.1; // Reward: increase the multiplier
+  } else {
+    repetition_count = 0;
+    interval_days = 1; // Penalty: reset interval to tomorrow
+    ease_factor = Math.max(1.3, ease_factor - 0.2); // Penalty: decrease multiplier, but never below 1.3
+  }
+
+  // Calculate the new future review date
+  const nextReviewDate = new Date();
+  nextReviewDate.setDate(nextReviewDate.getDate() + interval_days);
+
+  // Send the updated data back to Supabase
+  try {
+    await supabaseClient
+      .from('important_info')
+      .update({
+        repetition_count: repetition_count,
+        interval_days: interval_days,
+        ease_factor: ease_factor,
+        next_review_date: nextReviewDate.toISOString()
+      })
+      .eq('id', id);
+  } catch (err) {
+    console.error("Failed to save SM-2 data:", err.message);
   }
 }
 
@@ -68,6 +110,7 @@ let currentQuestionIndex = 0;
 let isTextToSpeechEnabled = true;
 let supabaseVocabulary = [];
 let supabaseImportantInfo = [];
+let currentAudioInstance = null;
 
 //elements
 const elements = {
@@ -149,6 +192,14 @@ const AudioEngine = {
 async function speakClueText(text) {
   if (!isTextToSpeechEnabled) return;
 
+  if (currentAudioInstance) {
+    currentAudioInstance.pause();
+    currentAudioInstance.currentTime = 0;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/narrator`, {
       method: 'POST',
@@ -159,20 +210,17 @@ async function speakClueText(text) {
       body: JSON.stringify({ text: text })
     });
 
-    if (!response.ok) {
-      throw new Error(`Edge Function failed with status ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Edge Function failed: ${response.status}`);
 
     const audioBlob = await response.blob();
-    
     const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-    audio.play();
+    
+    // NEW: Save the audio to our global variable so we can control it later
+    currentAudioInstance = new Audio(audioUrl);
+    currentAudioInstance.play();
 
   } catch (err) {
     console.error("High-quality TTS failed, falling back to robotic voice:", err);
-    
-    // fallback
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
@@ -259,7 +307,7 @@ function loadQuestion() {
     btn.textContent = ans.text;
     btn.setAttribute("aria-label", `Option ${idx + 1}: ${ans.text}`);
 
-    btn.addEventListener("click", () => handleSelection(btn, ans.isTarget, currentQuestion.target, currentQuestion.hint));
+    btn.addEventListener("click", () => handleSelection(btn, ans.isTarget, currentQuestion));
     elements.optionsContainer.appendChild(btn);
   });
 
@@ -268,25 +316,25 @@ function loadQuestion() {
   }
 }
 
-function handleSelection(buttonElement, isTarget, targetValue, hintText) {
+function handleSelection(buttonElement, isTarget, currentQuestion) {
+  if (currentCategory === "important" && currentQuestion.id) {
+    updateMemoryStrength(currentQuestion, isTarget);
+  }
+
   if (isTarget) {
     AudioEngine.playCorrect();
     if (isTextToSpeechEnabled) {
-      speakClueText(`Correct! The answer is ${targetValue}. Excellent job.`);
+      speakClueText(`Correct! The answer is ${currentQuestion.target}. Excellent job.`);
     }
-
-    elements.celebrationFeedback.innerHTML = `You correctly remembered: <strong>${targetValue}</strong>`;
+    elements.celebrationFeedback.innerHTML = `You correctly remembered: <strong>${currentQuestion.target}</strong>`;
     elements.celebrationOverlay.classList.add("active");
   } else {
     AudioEngine.playIncorrect();
-
     buttonElement.classList.add("incorrect");
     buttonElement.setAttribute("disabled", "true");
-
-    elements.hintDisplay.textContent = hintText;
-
+    elements.hintDisplay.textContent = currentQuestion.hint;
     if (isTextToSpeechEnabled) {
-      speakClueText(hintText);
+      speakClueText(currentQuestion.hint);
     }
   }
 }
@@ -321,6 +369,14 @@ elements.btnAlertCaregiver.addEventListener("click", () => {
 });
 
 elements.btnNextQuestion.addEventListener("click", () => {
+  if (currentAudioInstance) {
+    currentAudioInstance.pause();
+    currentAudioInstance.currentTime = 0;
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+  }
+
   elements.celebrationOverlay.classList.remove("active");
   currentQuestionIndex++;
   loadQuestion();
