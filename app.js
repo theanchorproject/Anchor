@@ -8,7 +8,7 @@ const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
   }
 });
 
-//pull from db
+//first pull from db
 async function getRandomTargetWord() {
   try {
     const { data, error } = await supabaseClient
@@ -21,6 +21,21 @@ async function getRandomTargetWord() {
     return data;
   } catch (err) {
     console.error(err.message);
+    return [];
+  }
+}
+
+//first pull from db
+async function getImportantInfo() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('important_info')
+      .select('clue, target, hint, distractors');
+
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    console.error("Failed to fetch important info:", err.message);
     return [];
   }
 }
@@ -45,28 +60,14 @@ const VOCABULARY_DETAILS = {
 };
 
 //placeholder data
-const QUIZ_DATABASE = {
-  important: [
-    {
-      clue: "What is your oldest son's name?",
-      target: "Michael",
-      distractors: ["James", "Robert", "William"],
-      hint: "Think of a name starting with 'M'."
-    },
-    {
-      clue: "What year were you born in?",
-      target: "1953",
-      distractors: ["1945", "1958", "1962"],
-      hint: "It was in the early 1950s."
-    }
-  ]
-};
+
 
 //misc
 let currentCategory = "everyday";
 let currentQuestionIndex = 0;
 let isTextToSpeechEnabled = true;
 let supabaseVocabulary = [];
+let supabaseImportantInfo = [];
 
 //elements
 const elements = {
@@ -195,19 +196,18 @@ function loadQuestion() {
   let currentQuestion = null;
 
   if (currentCategory === "important") {
-    const questions = QUIZ_DATABASE.important;
-    if (questions.length === 0) return;
+    const questions = supabaseImportantInfo;
+
+    if (questions.length === 0) {
+      elements.clueDisplay.textContent = "Loading important information...";
+      return;
+    }
 
     if (currentQuestionIndex >= questions.length) {
       currentQuestionIndex = 0;
     }
-    currentQuestion = questions[currentQuestionIndex];
+    currentQuestion = questions[currentQuestionIndex]
   } else {
-    if (supabaseVocabulary.length === 0) {
-      elements.clueDisplay.textContent = "Loading vocabulary...";
-      return;
-    }
-
     if (currentQuestionIndex >= supabaseVocabulary.length) {
       currentQuestionIndex = 0;
     }
@@ -334,9 +334,14 @@ window.addEventListener("DOMContentLoaded", async () => {
   elements.navImportant.classList.remove("active");
 
   try {
-    const data = await getRandomTargetWord();
-    if (data && data.length > 0) {
-      supabaseVocabulary = data.sort(() => Math.random() - 0.5);
+    const vocabData = await getRandomTargetWord();
+    if (vocabData && vocabData.length > 0) {
+      supabaseVocabulary = vocabData.sort(() => Math.random() - 0.5);
+    }
+    
+    const importantData = await getImportantInfo();
+    if (importantData && importantData.length > 0) {
+      supabaseImportantInfo = importantData.sort(() => Math.random() - 0.5);
     }
   } catch (err) {
     console.error(err);
