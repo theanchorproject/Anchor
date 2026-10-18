@@ -82,28 +82,6 @@ async function updateMemoryStrength(item, isCorrect) {
   }
 }
 
-//placeholder data
-const VOCABULARY_DETAILS = {
-  toothbrush: {
-    clue: "What do you use to clean your teeth every morning and night?",
-    distractors: ["hairbrush", "soap", "towel"],
-    hint: "It has bristles, and you apply toothpaste to it."
-  },
-  refrigerator: {
-    clue: "What machine do you use to keep milk cold?",
-    distractors: ["oven", "microwave", "blender"],
-    hint: "It stands tall in the kitchen and has a cold door."
-  },
-  television: {
-    clue: "What screen do you watch to see your favorite shows and news?",
-    distractors: ["toaster", "radio", "washing machine"],
-    hint: "It displays moving pictures and is controlled by a remote."
-  }
-};
-
-//placeholder data
-
-
 //misc
 let currentCategory = "everyday";
 let currentQuestionIndex = 0;
@@ -216,10 +194,15 @@ async function speakClueText(text) {
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
     
-    // NEW: Save the audio to our global variable so we can control it later
     currentAudioInstance = new Audio(audioUrl);
-    currentAudioInstance.play();
-
+    const playPromise = currentAudioInstance.play();
+    
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        if (error.name === 'AbortError') return;
+        console.error("Audio playback error:", error);
+      });
+    }
   } catch (err) {
     console.error("High-quality TTS failed, falling back to robotic voice:", err);
     if ('speechSynthesis' in window) {
@@ -231,43 +214,53 @@ async function speakClueText(text) {
   }
 }
 
-function getFallbackDistractors(category, targetWord) {
-  const sameCategory = supabaseVocabulary
-    .filter(x => x.category === category && x.target_word !== targetWord)
-    .map(x => x.target_word);
-
-  if (sameCategory.length >= 3) {
-    return sameCategory.slice(0, 3);
-  }
-
-  const allOtherWords = supabaseVocabulary
-    .filter(x => x.target_word !== targetWord)
-    .map(x => x.target_word);
-
-  const pool = [...sameCategory, ...allOtherWords, "apple", "banana", "chair", "table", "clock"];
-  const uniquePool = Array.from(new Set(pool)).filter(w => w !== targetWord);
-  return uniquePool.slice(0, 3);
-}
-
-function getEverydayQuestion(item) {
+// gemini powered question/distractor fetcher
+async function getEverydayQuestion(item) {
   if (!item) return null;
-  const word = item.target_word.toLowerCase();
-  const details = VOCABULARY_DETAILS[word] || {
-    clue: `What everyday item is this?`,
-    distractors: getFallbackDistractors(item.category, item.target_word),
-    hint: `It starts with the letter '${item.target_word[0].toUpperCase()}'.`
-  };
+  
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/brain`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        targetWord: item.target_word,
+        category: item.category
+      })
+    });
 
-  return {
-    clue: details.clue,
-    target: item.target_word,
-    distractors: details.distractors,
-    hint: details.hint
-  };
+    if (!response.ok) throw new Error("Brain API failed");
+    
+    const aiData = await response.json();
+    
+    // AI models sometimes capitalize JSON keys. This catches all variations safely.
+    const safeDistractors = aiData.distractors || aiData.Distractors || aiData.DISTRACTORS;
+    
+    return {
+      clue: aiData.clue || aiData.Clue || `What item is this?`,
+      target: item.target_word,
+      // Guarantee it is an array before returning
+      distractors: Array.isArray(safeDistractors) ? safeDistractors : ["apple", "chair", "clock"],
+      hint: aiData.hint || aiData.Hint || `It starts with '${item.target_word[0].toUpperCase()}'.`
+    };
+  } catch (err) {
+    console.error("AI Generation failed, using absolute fallback:", err);
+    return {
+      clue: `What everyday item is this?`,
+      target: item.target_word || "Item",
+      distractors: ["apple", "chair", "clock"],
+      hint: `It starts with the letter '${(item.target_word || "A")[0].toUpperCase()}'.`
+    };
+  }
 }
 
-function loadQuestion() {
+async function loadQuestion() {
   let currentQuestion = null;
+
+  elements.optionsContainer.innerHTML = "";
+  elements.hintDisplay.textContent = "";
 
   if (currentCategory === "important") {
     const questions = supabaseImportantInfo;
@@ -280,23 +273,30 @@ function loadQuestion() {
     if (currentQuestionIndex >= questions.length) {
       currentQuestionIndex = 0;
     }
-    currentQuestion = questions[currentQuestionIndex]
+    currentQuestion = questions[currentQuestionIndex];
   } else {
+    elements.clueDisplay.textContent = "Generating next challenge...";
+    
     if (currentQuestionIndex >= supabaseVocabulary.length) {
       currentQuestionIndex = 0;
     }
     const item = supabaseVocabulary[currentQuestionIndex];
-    currentQuestion = getEverydayQuestion(item);
+    
+    currentQuestion = await getEverydayQuestion(item);
   }
 
   if (!currentQuestion) return;
 
   elements.clueDisplay.textContent = currentQuestion.clue;
-  elements.hintDisplay.textContent = "";
+
+  const fallbackDistractors = ["apple", "banana", "clock"];
+  const finalDistractors = Array.isArray(currentQuestion.distractors) 
+    ? currentQuestion.distractors 
+    : fallbackDistractors;
 
   const answers = [
-    { text: currentQuestion.target, isTarget: true },
-    ...currentQuestion.distractors.map(d => ({ text: d, isTarget: false }))
+    { text: currentQuestion.target || "Item", isTarget: true },
+    ...finalDistractors.map(d => ({ text: d, isTarget: false }))
   ];
 
   answers.sort(() => Math.random() - 0.5);
@@ -525,7 +525,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 (function logAppVersion() {
-  const version = "v0.03";
+  const version = "v0.05";
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
 
