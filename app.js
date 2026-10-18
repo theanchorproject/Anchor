@@ -145,16 +145,41 @@ const AudioEngine = {
   }
 };
 
-//tts
-function speakClueText(text) {
-  if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
+//tts with elevenlabs API
+async function speakClueText(text) {
+  if (!isTextToSpeechEnabled) return;
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.5;
-  utterance.pitch = 1.0;
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/narrator`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text: text })
+    });
 
-  window.speechSynthesis.speak(utterance);
+    if (!response.ok) {
+      throw new Error(`Edge Function failed with status ${response.status}`);
+    }
+
+    const audioBlob = await response.blob();
+    
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+    audio.play();
+
+  } catch (err) {
+    console.error("High-quality TTS failed, falling back to robotic voice:", err);
+    
+    // fallback
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.85; 
+      window.speechSynthesis.speak(utterance);
+    }
+  }
 }
 
 function getFallbackDistractors(category, targetWord) {
@@ -349,7 +374,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 (function logAppVersion() {
-  const version = "v0.02.1";
+  const version = "v0.03";
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
 
