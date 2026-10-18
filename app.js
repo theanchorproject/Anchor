@@ -120,6 +120,7 @@ const elements = {
   btnEmergencyTrigger: document.getElementById("btn-emergency-trigger"),
   btnResumeQuiz: document.getElementById("btn-resume-quiz"),
   btnAlertCaregiver: document.getElementById("btn-alert-caregiver"),
+  btnCall911: document.getElementById("btn-call-911"), // <-- ADD THIS LINE
   celebrationOverlay: document.getElementById("celebration-overlay"),
   btnNextQuestion: document.getElementById("btn-next-question"),
   celebrationFeedback: document.getElementById("celebration-feedback"),
@@ -356,16 +357,110 @@ elements.btnResumeQuiz.addEventListener("click", () => {
   elements.emergencyOverlay.classList.remove("active");
 });
 
-elements.btnAlertCaregiver.addEventListener("click", () => {
-  elements.btnAlertCaregiver.style.background = "#059669";
-  elements.btnAlertCaregiver.querySelector(".btn-text-large").textContent = "Caregiver Notified";
-  elements.btnAlertCaregiver.querySelector(".btn-text-small").textContent = "A distress notification was simulated.";
+const makeHoldToTrigger = (btnElement, actionCallback) => {
+  let pressTimer;
+  let countdownInterval;
+  let isTriggered = false;
+  let timeLeft = 3;
 
+  const originalText = btnElement.querySelector(".btn-text-large").textContent;
+
+  const startPress = (e) => {
+    if (e.type === 'touchstart') e.preventDefault(); 
+    isTriggered = false;
+    timeLeft = 3;
+    
+    btnElement.classList.add("is-pressing");
+    btnElement.querySelector(".btn-text-large").textContent = `Hold for ${timeLeft}...`;
+
+    countdownInterval = setInterval(() => {
+      timeLeft--;
+      if (timeLeft > 0) {
+        btnElement.querySelector(".btn-text-large").textContent = `Hold for ${timeLeft}...`;
+      }
+    }, 1000);
+
+    pressTimer = setTimeout(() => {
+      isTriggered = true;
+      clearInterval(countdownInterval);
+      btnElement.classList.remove("is-pressing");
+      actionCallback();
+    }, 3000);
+  };
+
+  const cancelPress = () => {
+    if (isTriggered) return; 
+    
+    clearTimeout(pressTimer);
+    clearInterval(countdownInterval);
+    btnElement.classList.remove("is-pressing");
+    btnElement.querySelector(".btn-text-large").textContent = originalText;
+  };
+
+  btnElement.addEventListener("mousedown", startPress);
+  btnElement.addEventListener("touchstart", startPress, { passive: false });
+  
+  btnElement.addEventListener("mouseup", cancelPress);
+  btnElement.addEventListener("mouseleave", cancelPress);
+  btnElement.addEventListener("touchend", cancelPress);
+  btnElement.addEventListener("touchcancel", cancelPress);
+};
+
+// 1. Wire up the Caregiver Pager Button
+makeHoldToTrigger(elements.btnAlertCaregiver, async () => {
+  const originalSub = elements.btnAlertCaregiver.querySelector(".btn-text-small").textContent;
+
+  elements.btnAlertCaregiver.style.background = "#d97706";
+  elements.btnAlertCaregiver.querySelector(".btn-text-large").textContent = "Sending SOS...";
+  elements.btnAlertCaregiver.querySelector(".btn-text-small").textContent = "Connecting to network...";
+
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/pager`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        targetContact: "dev.theanchorproject@gmail.com", 
+        patientName: "Grandma"
+      })
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    elements.btnAlertCaregiver.style.background = "#059669"; 
+    elements.btnAlertCaregiver.querySelector(".btn-text-large").textContent = "Caregiver Notified";
+    elements.btnAlertCaregiver.querySelector(".btn-text-small").textContent = "SOS successfully delivered.";
+
+  } catch (err) {
+    console.error("Failed to trigger pager:", err);
+    elements.btnAlertCaregiver.style.background = "#dc2626"; 
+    elements.btnAlertCaregiver.querySelector(".btn-text-large").textContent = "Failed to Send";
+    elements.btnAlertCaregiver.querySelector(".btn-text-small").textContent = "Network error. Please call 911.";
+  }
+
+  // Reset button visuals after 4 seconds
   setTimeout(() => {
     elements.btnAlertCaregiver.style.background = "";
     elements.btnAlertCaregiver.querySelector(".btn-text-large").textContent = "Alert Primary Caregiver";
-    elements.btnAlertCaregiver.querySelector(".btn-text-small").textContent = "Send urgent distress notice";
+    elements.btnAlertCaregiver.querySelector(".btn-text-small").textContent = originalSub;
   }, 4000);
+});
+
+// 2. Wire up the 911 Emergency Button
+makeHoldToTrigger(elements.btnCall911, () => {
+  elements.btnCall911.style.background = "#dc2626"; // Emergency red
+  elements.btnCall911.querySelector(".btn-text-large").textContent = "Dialing 911...";
+  
+  // Trigger native phone dialer with 911 prepopulated
+  window.location.href = "tel:911";
+
+  // Reset text slightly after dialer opens
+  setTimeout(() => {
+    elements.btnCall911.style.background = "";
+    elements.btnCall911.querySelector(".btn-text-large").textContent = "Call Emergency Services";
+  }, 3000);
 });
 
 elements.btnNextQuestion.addEventListener("click", () => {

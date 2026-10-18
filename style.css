@@ -723,3 +723,33 @@ body {
     justify-content: center;
   }
 }
+
+.btn-safeguard {
+  position: relative;
+  overflow: hidden;
+  user-select: none; 
+  -webkit-user-select: none;
+}
+
+.btn-safeguard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background-color: rgba(0, 0, 0, 0.3); /* Darkens the button underneath */
+  z-index: 1;
+  transition: width 0s linear; 
+}
+
+.btn-safeguard.is-pressing::before {
+  width: 100%;
+  transition: width 3s linear; /* 3-second fill */
+}
+
+.btn-safeguard .btn-text-large,
+.btn-safeguard .btn-text-small {
+  position: relative;
+  z-index: 2;
+}
